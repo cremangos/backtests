@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.pytest_cache/
+results/*.csv
+results/*.json
+results/qa_chart_*.png
+!results/.gitkeep
+node_modules/
+.claude/

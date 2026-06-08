@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>IB By Rejection — Entry Charts (Past 2 Years)</title>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0e1116;
+    color: #e6e6e6;
+  }
+  header {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #f0f6fc;
+  }
+  header .meta { color: #7d8590; font-size: 12px; }
+  .container { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - 49px); }
+  aside {
+    background: #0d1117;
+    border-right: 1px solid #30363d;
+    overflow-y: auto;
+  }
+  .filters {
+    padding: 12px 16px;
+    border-bottom: 1px solid #30363d;
+    background: #161b22;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .filters label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 12px;
+    font-size: 12px;
+    color: #c9d1d9;
+  }
+  .filters input[type=checkbox] { accent-color: #58a6ff; }
+  .filters input[type=text] {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+    font-size: 12px;
+  }
+  .filters input[type=number] {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+  .size-btn {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .size-btn:hover { background: #1f242c; }
+  .size-btn.active { background: #1f6feb; border-color: #58a6ff; color: #fff; }
+  ul.trade-list { list-style: none; margin: 0; padding: 0; }
+  ul.trade-list li {
+    padding: 8px 16px;
+    border-bottom: 1px solid #21262d;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  ul.trade-list li:hover { background: #1f242c; }
+  ul.trade-list li.active { background: #1f6feb22; border-left: 3px solid #58a6ff; padding-left: 13px; }
+  ul.trade-list .date { color: #f0f6fc; font-weight: 500; }
+  ul.trade-list .pnl-win { color: #3fb950; }
+  ul.trade-list .pnl-loss { color: #f85149; }
+  ul.trade-list .meta-line { color: #7d8590; margin-top: 2px; }
+  main { padding: 12px; overflow-y: auto; }
+  .summary-bar {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 24px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .summary-bar .item .label { color: #7d8590; font-size: 11px; }
+  .summary-bar .item .value { color: #f0f6fc; font-weight: 500; }
+  #chart {
+    height: 540px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+  }
+  .legend {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #c9d1d9;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .legend .swatch { display: inline-block; width: 12px; height: 4px; vertical-align: middle; margin-right: 4px; }
+  .nav {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+    z-index: 20;
+  }
+  .nav button {
+    background: #1f6feb;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .nav button:hover { background: #388bfd; }
+  .nav button:disabled { background: #30363d; cursor: not-allowed; }
+  .empty-state {
+    text-align: center;
+    color: #7d8590;
+    margin-top: 200px;
+    font-size: 14px;
+  }
+  .chart-tooltip {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(13, 17, 23, 0.92);
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 6px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    border-radius: 4px;
+    pointer-events: none;
+    display: none;
+    z-index: 10;
+    font-family: monospace;
+  }
+  .chart-tooltip .row { white-space: nowrap; }
+  .chart-tooltip .lbl { color: #7d8590; }
+  .summary-totals {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .summary-totals .stat { display: flex; flex-direction: column; }
+  .summary-totals .stat .lbl { color: #7d8590; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .summary-totals .stat .val { color: #c9d1d9; font-weight: 600; font-size: 13px; }
+  .chart-container { position: relative; }
+  .vline {
+    position: absolute;
+    top: 0;
+    bottom: 24px;  /* leave room for the time-axis labels */
+    width: 1px;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .vline-0930 { background: rgba(125, 133, 144, 0.55); border-left: 1px dashed #7d8590; }
+  .vline-1030 { background: rgba(125, 133, 144, 0.55); border-left: 1px dashed #7d8590; }
+  .vline-label {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    background: #161b22;
+    color: #c9d1d9;
+    font-size: 10px;
+    padding: 1px 4px;
+    border: 1px solid #30363d;
+    border-radius: 3px;
+    font-family: monospace;
+  }
+  .formation-marker-line {
+    position: absolute;
+    top: 0;
+    bottom: 24px;
+    width: 1px;
+    pointer-events: none;
+    z-index: 4;
+    background: rgba(210, 153, 34, 0.5);
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>IB By Rejection — Entry Charts <span style="font-size:11px;color:#7d8590;font-weight:normal">(STRICT + stop-touched invalidation; prev day = 18:00→17:00 globex day)</span></h1>
+  <span class="meta" id="meta">Loading…</span>
+</header>
+<div class="container">
+  <aside>
+    <div class="filters">
+      <div>
+        <label><input type="checkbox" id="f-win" checked> Wins</label>
+        <label><input type="checkbox" id="f-loss" checked> Losses</label>
+        <label><input type="checkbox" id="f-be" checked> Breakeven</label>
+      </div>
+      <div style="margin-top: 8px;">
+        <label><input type="checkbox" id="f-long" checked> Long</label>
+        <label><input type="checkbox" id="f-short" checked> Short</label>
+      </div>
+      <input type="text" id="f-date" placeholder="Filter by date (YYYY-MM-DD)…" />
+      <div style="margin-top: 10px; font-size: 11px; color: #7d8590;">
+        <div style="margin-bottom: 4px;">Contracts (1 NQ = $20/pt, 1 MNQ = $2/pt):</div>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+          <button class="size-btn" data-contracts="1" data-mult="20">1 NQ</button>
+          <button class="size-btn" data-contracts="1" data-mult="2">1 MNQ</button>
+          <button class="size-btn" data-contracts="2" data-mult="20">2 NQ</button>
+          <button class="size-btn" data-contracts="5" data-mult="2">5 MNQ</button>
+          <button class="size-btn" data-contracts="2" data-mult="2">2 MNQ</button>
+        </div>
+        <div style="margin-top: 6px; display: flex; align-items: center; gap: 6px;">
+          <span style="color: #7d8590;">Custom:</span>
+          <input type="number" id="f-contracts" value="1" min="0.1" step="0.1" style="width: 60px;" />
+          <span style="color: #7d8590;">× $</span>
+          <input type="number" id="f-mult" value="20" min="0.5" step="0.5" style="width: 60px;" />
+          <span style="color: #7d8590;">/pt</span>
+        </div>
+      </div>
+    </div>
+    <ul class="trade-list" id="trade-list"></ul>
+  </aside>
+  <main>
+    <div class="summary-totals" id="summary-totals"></div>
+    <div class="summary-bar" id="summary">Select a trade to view the chart.</div>
+    <div class="chart-container" id="chart-container">
+      <div id="chart"></div>
+      <div class="chart-tooltip" id="chart-tooltip"></div>
+    </div>
+    <div class="legend">
+      <span><span class="swatch" style="background:#26a69a"></span>Price</span>
+      <span><span class="swatch" style="background:#f85149"></span>IB High</span>
+      <span><span class="swatch" style="background:#3fb950"></span>IB Low</span>
+      <span><span class="swatch" style="background:#d29922"></span>IB Midpoint</span>
+      <span><span class="swatch" style="background:#58a6ff"></span>Entry</span>
+      <span><span class="swatch" style="background:#f85149"></span>Stop</span>
+      <span><span class="swatch" style="background:#3fb950"></span>Target</span>
+      <span><span class="swatch" style="background:#a371f7"></span>Exit</span>
+    </div>
+  </main>
+</div>
+<div class="nav">
+  <button id="prev">◀ Prev</button>
+  <button id="next">Next ▶</button>
+  <button id="fit" title="Fit full previous day + trade day">⤢ Fit</button>
+</div>
+
+<script>
+let data = null;
+let chart = null;
+let candleSeries = null;
+let filtered = [];
+let activeIdx = -1;
+let activePriceLines = [];  // track price lines for clean removal
+let currentBars = [];       // bars for the current trade (used by crosshair tooltip)
+
+// Contract sizing (display only - P&L is computed for 1 NQ in the data)
+let contracts = 1;
+let multPerPt = 20;  // $/point per contract
+let activeSizeBtn = null;
+
+function sizeMultiplier() {
+  return (contracts * multPerPt) / 20;  // raw pnl is for 1 NQ ($20/pt)
+}
+
+function fmtPnl(pnlRaw) {
+  const pnl = pnlRaw * sizeMultiplier();
+  return (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
+}
+
+function getDataFile() {
+  const params = new URLSearchParams(window.location.search);
+  const which = params.get('data');
+  if (which === 'baseline') return 'chart_data_baseline.json';
+  if (which === 'strict') return 'chart_data_strict.json';
+  return 'chart_data.json';  // default: ib50 simple
+}
+
+async function load() {
+  const file = getDataFile();
+  // Cache-bust so the browser doesn't serve a stale chart_data.json
+  try {
+    const res = await fetch(file + '?t=' + Date.now());
+    if (!res.ok) {
+      document.getElementById('meta').textContent = `Failed to load ${file} (HTTP ${res.status}). Make sure you're serving via a local web server (e.g. python -m http.server) and not opening the file directly.`;
+      console.error('Fetch failed:', res.status, res.statusText);
+      return;
+    }
+    data = await res.json();
+    if (!data || !data.days || data.days.length === 0) {
+      document.getElementById('meta').textContent = `Loaded ${file} but it contains 0 days. Check the file.`;
+      console.error('Empty data:', data);
+      return;
+    }
+    console.log('Loaded', data.days.length, 'days from', file);
+    document.getElementById('meta').textContent =
+      `${data.instrument} | ${data.config.stop_basis} / ${data.config.entry_type} / ${data.config.target_type} | ${data.total_trades} trades | ${data.date_range[0]} → ${data.date_range[1]}`;
+    applyFilters();
+    buildChart();
+    renderList();
+    renderTotals();
+    if (filtered.length > 0) selectTrade(0);
+  } catch (e) {
+    document.getElementById('meta').textContent = `Error loading ${file}: ${e.message}. If you opened this directly via file://, browsers block fetch() — run a local server instead.`;
+    console.error('Load error:', e);
+  }
+}
+
+function renderTotals() {
+  const trades = data.days.map(d => d.trade);
+  const n = trades.length;
+  if (n === 0) { document.getElementById('summary-totals').innerHTML = ''; return; }
+  const pnls = trades.map(t => t.pnl);
+  const wins = pnls.filter(p => p > 0);
+  const losses = pnls.filter(p => p < 0);
+  const totalPnl = pnls.reduce((a, b) => a + b, 0);
+  const winRate = wins.length / n;
+  const grossProfit = wins.reduce((a, b) => a + b, 0);
+  const grossLoss = Math.abs(losses.reduce((a, b) => a + b, 0));
+  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : Infinity;
+  const avgWin = wins.length ? wins.reduce((a,b)=>a+b,0)/wins.length : 0;
+  const avgLoss = losses.length ? losses.reduce((a,b)=>a+b,0)/losses.length : 0;
+  // Equity curve and max DD
+  let equity = 0, peak = 0, maxDd = 0, streak = 0, maxStreak = 0;
+  for (const p of pnls) {
+    equity += p;
+    if (equity > peak) peak = equity;
+    const dd = peak - equity;
+    if (dd > maxDd) maxDd = dd;
+    if (p < 0) { streak++; if (streak > maxStreak) maxStreak = streak; } else { streak = 0; }
+  }
+  // MAE/MFE percentiles
+  const maes = trades.map(t => t.mae).sort((a, b) => a - b);
+  const mfes = trades.map(t => t.mfe).sort((a, b) => a - b);
+  const pctile = (arr, p) => arr.length ? arr[Math.floor((arr.length - 1) * p)] : 0;
+  // Combined edge
+  const expectancy = totalPnl / n;
+  const combinedEdge = expectancy * Math.sqrt(winRate);
+  // Kelly
+  let kelly = 0;
+  if (avgLoss !== 0 && avgWin > 0) {
+    const b = avgWin / Math.abs(avgLoss);
+    const q = 1 - winRate;
+    kelly = Math.max(0, (b * winRate - q) / b);
+  }
+  const fmt = (v, sym='') => `${sym}${v.toFixed(0)}`;
+  const html = `
+    <div class="stat"><span class="lbl">Trades</span><span class="val">${n}</span></div>
+    <div class="stat"><span class="lbl">Win Rate</span><span class="val">${(winRate*100).toFixed(1)}%</span></div>
+    <div class="stat"><span class="lbl">Profit Factor</span><span class="val">${profitFactor.toFixed(2)}</span></div>
+    <div class="stat"><span class="lbl">Net P&amp;L</span><span class="val" style="color:${totalPnl>=0?'#3fb950':'#f85149'}">${fmt(totalPnl, '$')}</span></div>
+    <div class="stat"><span class="lbl">Avg/Trade</span><span class="val" style="color:${expectancy>=0?'#3fb950':'#f85149'}">${fmt(expectancy, '$')}</span></div>
+    <div class="stat"><span class="lbl">Avg Win / Loss</span><span class="val">${fmt(avgWin, '$')} / ${fmt(avgLoss, '$')}</span></div>
+    <div class="stat"><span class="lbl">Max Cons Losses</span><span class="val">${maxStreak}</span></div>
+    <div class="stat"><span class="lbl">Max DD</span><span class="val" style="color:#f85149">${fmt(maxDd, '$')}</span></div>
+    <div class="stat"><span class="lbl">Doomsday Budget</span><span class="val">${maxStreak>0 ? fmt(maxDd/maxStreak, '$') : 'n/a'}</span></div>
+    <div class="stat"><span class="lbl">MAE p30 / p50</span><span class="val">${pctile(maes, 0.3).toFixed(1)} / ${pctile(maes, 0.5).toFixed(1)} pts</span></div>
+    <div class="stat"><span class="lbl">MFE p30 / p50</span><span class="val">${pctile(mfes, 0.3).toFixed(1)} / ${pctile(mfes, 0.5).toFixed(1)} pts</span></div>
+    <div class="stat"><span class="lbl">Combined Edge</span><span class="val">${combinedEdge.toFixed(1)}</span></div>
+    <div class="stat"><span class="lbl">Kelly %</span><span class="val">${(kelly*100).toFixed(2)}%</span></div>
+  `;
+  document.getElementById('summary-totals').innerHTML = html;
+}
+
+function classifyOutcome(trade) {
+  if (trade.hit_target) return 'win';
+  if (trade.hit_stop) return 'loss';
+  return 'be';
+}
+
+function applyFilters() {
+  const fWin = document.getElementById('f-win').checked;
+  const fLoss = document.getElementById('f-loss').checked;
+  const fBe = document.getElementById('f-be').checked;
+  const fLong = document.getElementById('f-long').checked;
+  const fShort = document.getElementById('f-short').checked;
+  const fDate = document.getElementById('f-date').value.trim();
+  filtered = data.days.filter(d => {
+    const t = d.trade;
+    const oc = classifyOutcome(t);
+    if (oc === 'win' && !fWin) return false;
+    if (oc === 'loss' && !fLoss) return false;
+    if (oc === 'be' && !fBe) return false;
+    if (t.direction === 'long' && !fLong) return false;
+    if (t.direction === 'short' && !fShort) return false;
+    if (fDate && !t.date.includes(fDate)) return false;
+    return true;
+  });
+  // Keep selection if it's still visible
+  if (activeIdx >= filtered.length) activeIdx = -1;
+}
+
+function renderList() {
+  const ul = document.getElementById('trade-list');
+  ul.innerHTML = '';
+  filtered.forEach((d, i) => {
+    const t = d.trade;
+    const li = document.createElement('li');
+    if (i === activeIdx) li.classList.add('active');
+    const pnlScaled = t.pnl * sizeMultiplier();
+    const pnlClass = pnlScaled >= 0 ? 'pnl-win' : 'pnl-loss';
+    const pnlStr = (pnlScaled >= 0 ? '+' : '') + '$' + pnlScaled.toFixed(0);
+    const outcomeTag = t.hit_target ? '🎯' : (t.hit_stop ? '🛑' : '⏱');
+    const entryTime = fmtET(t.entry_time);
+    li.innerHTML = `
+      <div class="date">${t.date} <span style="float:right">${outcomeTag}</span></div>
+      <div class="meta-line">
+        ${t.direction.toUpperCase()} | ${t.bias} | IB ${t.ib_low.toFixed(0)}–${t.ib_high.toFixed(0)} (${t.ib_range.toFixed(0)})
+      </div>
+      <div class="meta-line">
+        Entry ${entryTime} @ ${t.entry_price.toFixed(2)} → <span class="${pnlClass}">${pnlStr}</span>
+      </div>
+    `;
+    li.addEventListener('click', () => selectTrade(i));
+    ul.appendChild(li);
+  });
+}
+
+function buildChart() {
+  const container = document.getElementById('chart');
+  container.innerHTML = '';
+  chart = LightweightCharts.createChart(container, {
+    width: container.clientWidth,
+    height: 540,
+    layout: {
+      background: { type: 'solid', color: '#0d1117' },
+      textColor: '#c9d1d9',
+    },
+    grid: {
+      vertLines: { color: '#21262d' },
+      horzLines: { color: '#21262d' },
+    },
+    timeScale: {
+      timeZone: 'America/New_York',
+      rightOffset: 12,
+      barSpacing: 6,
+    },
+    rightPriceScale: {
+      borderColor: '#30363d',
+    },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+  });
+  candleSeries = chart.addCandlestickSeries({
+    upColor: '#26a69a', downColor: '#ef5350',
+    borderUpColor: '#26a69a', borderDownColor: '#ef5350',
+    wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+    priceScaleId: 'right',
+    priceFormat: { type: 'price', precision: 2, minMove: 0.25 },
+  });
+
+  // Reduce right-axis price label density (auto-scale was spamming every 10 pts)
+  chart.priceScale('right').applyOptions({
+    scaleMargins: { top: 0.1, bottom: 0.1 },
+    borderColor: '#30363d',
+  });
+
+  // Format the time axis: always show "MMM d HH:mm" so multiple days are distinguishable
+  chart.applyOptions({
+    timeScale: {
+      timeZone: 'America/New_York',
+      rightOffset: 12,
+      barSpacing: 6,
+      tickMarkFormatter: (time) => {
+        const d = new Date(time * 1000);
+        const monthDay = d.toLocaleDateString('en-US', {
+          timeZone: 'America/New_York', month: 'short', day: 'numeric',
+        });
+        const hhmm = d.toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false,
+        });
+        return `${monthDay} ${hhmm}`;
+      },
+    },
+  });
+
+  window.addEventListener('resize', () => {
+    chart.applyOptions({ width: container.clientWidth });
+  });
+
+  // Re-draw vertical lines when the user pans/zooms the time axis.
+  chart.timeScale().subscribeVisibleTimeRangeChange(() => {
+    if (verticalLineState.dayStart != null) {
+      drawVerticalLines(verticalLineState.ibHighTime, verticalLineState.ibEndTime, verticalLineState.dayStart);
+    }
+  });
+
+  // Crosshair tooltip: shows OHLC + datetime when the user hovers
+  const tooltip = document.getElementById('chart-tooltip');
+  chart.subscribeCrosshairMove(param => {
+    if (!param || param.time === undefined || param.time === null || !param.point) {
+      tooltip.style.display = 'none';
+      return;
+    }
+    const ts = param.time;
+    // Look up the bar at this timestamp from our cached currentBars (works on all chart versions)
+    let nearest = null;
+    if (currentBars.length > 0) {
+      // Binary search by timestamp for nearest bar
+      let lo = 0, hi = currentBars.length - 1, bestDiff = Infinity;
+      // Walk through and find the bar with the smallest diff (linear, since arrays are small)
+      for (const b of currentBars) {
+        const d = Math.abs(b.t - ts);
+        if (d < bestDiff) { nearest = b; bestDiff = d; }
+        if (d === 0) break;
+      }
+    }
+    if (!nearest) {
+      tooltip.style.display = 'none';
+      return;
+    }
+    // Format datetime
+    const d = new Date(ts * 1000);
+    const monthDay = d.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
+    const weekday = d.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short' });
+    const hhmm = d.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false });
+    const fullDate = `${weekday} ${monthDay} ${hhmm} ET`;
+    // Format OHLC
+    const up = nearest.c >= nearest.o;
+    const clr = up ? '#3fb950' : '#f85149';
+    const ohlc = `<div class="row"><span class="lbl">O </span>${nearest.o.toFixed(2)} <span class="lbl">H </span>${nearest.h.toFixed(2)} <span class="lbl">L </span>${nearest.l.toFixed(2)} <span class="lbl">C </span><span style="color:${clr};font-weight:bold">${nearest.c.toFixed(2)}</span></div>`;
+    tooltip.innerHTML = `<div class="row" style="color:#58a6ff;font-weight:bold;margin-bottom:3px">${fullDate}</div>${ohlc}`;
+    tooltip.style.display = 'block';
+    // Position near the cursor but keep within the chart container
+    const containerRect = container.getBoundingClientRect();
+    let x = param.point.x + 14;
+    let y = param.point.y + 14;
+    if (x + tooltip.offsetWidth > containerRect.width) x = param.point.x - tooltip.offsetWidth - 14;
+    if (y + tooltip.offsetHeight > containerRect.height) y = param.point.y - tooltip.offsetHeight - 14;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+  });
+}
+
+function ts2time(ts) {
+  return new Date(ts * 1000);
+}
+
+// Vertical-line overlay (lightweight-charts v4 has no native vertical line).
+// We compute the x-pixel coordinate for each anchor timestamp and position
+// absolutely-positioned <div> elements over the chart container.
+let verticalLineState = { ibHighTime: null, ibEndTime: null, dayStart: null };
+
+function clearVerticalLines() {
+  const container = document.getElementById('chart-container');
+  if (!container) return;
+  container.querySelectorAll('.vline, .vline-label, .formation-marker-line').forEach(el => el.remove());
+}
+
+function positionVerticalLine(ts, className, labelText) {
+  if (ts == null) return;
+  let x;
+  try {
+    x = chart.timeScale().timeToCoordinate(ts);
+  } catch (e) {
+    return;
+  }
+  if (x === null || x === undefined || Number.isNaN(x)) return;
+  const container = document.getElementById('chart-container');
+  const containerRect = container.getBoundingClientRect();
+  // Clamp to container width
+  if (x < 0 || x > containerRect.width) return;
+  const line = document.createElement('div');
+  line.className = className;
+  line.style.left = x + 'px';
+  if (className === 'vline-0930' || className === 'vline-1030') {
+    line.classList.add('vline');
+  }
+  container.appendChild(line);
+  if (labelText) {
+    const lbl = document.createElement('div');
+    lbl.className = 'vline-label';
+    lbl.textContent = labelText;
+    lbl.style.left = (x + 3) + 'px';
+    lbl.style.top = '2px';
+    container.appendChild(lbl);
+  }
+}
+
+function drawVerticalLines(ibHighTime, ibEndTime, dayStartTs) {
+  clearVerticalLines();
+  // 09:30 = dayStartTs (already floored to 09:30 ET)
+  // 10:30 = dayStartTs + 60 min
+  // IBH formation = ibHighTime
+  if (dayStartTs != null) {
+    const ts0930 = dayStartTs;
+    const ts1030 = dayStartTs + 60 * 60;
+    positionVerticalLine(ts0930, 'vline-0930', '09:30');
+    positionVerticalLine(ts1030, 'vline-1030', '10:30');
+  }
+  if (ibHighTime != null) {
+    // Subtle marker line at the moment IBH was formed
+    const x = (() => { try { return chart.timeScale().timeToCoordinate(ibHighTime); } catch (e) { return null; } })();
+    if (x !== null && x !== undefined && !Number.isNaN(x)) {
+      const container = document.getElementById('chart-container');
+      const containerRect = container.getBoundingClientRect();
+      if (x >= 0 && x <= containerRect.width) {
+        const line = document.createElement('div');
+        line.className = 'formation-marker-line';
+        line.style.left = x + 'px';
+        container.appendChild(line);
+      }
+    }
+  }
+  verticalLineState = { ibHighTime, ibEndTime, dayStart: dayStartTs };
+}
+
+function fmtET(ts) {
+  // Format Unix seconds as ET HH:MM
+  const d = new Date(ts * 1000);
+  return d.toLocaleTimeString('en-US', {
+    timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+}
+
+function fmtDateET(ts) {
+  const d = new Date(ts * 1000);
+  return d.toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+}
+
+function selectTrade(i) {
+  if (i < 0 || i >= filtered.length) return;
+  activeIdx = i;
+  renderList();
+  const d = filtered[i];
+  const t = d.trade;
+
+  // Cache bars for the crosshair tooltip's nearest-bar lookup
+  currentBars = [...(d.prev_day_bars || []), ...(d.day_bars || [])];
+
+  // Remove previously created price lines (track them ourselves for compatibility)
+  activePriceLines.forEach(line => {
+    try { candleSeries.removePriceLine(line); } catch (e) {}
+  });
+  activePriceLines = [];
+
+  // Combine prev day + day bars
+  const allBars = [...(d.prev_day_bars || []), ...(d.day_bars || [])];
+  if (allBars.length === 0) {
+    document.getElementById('summary').innerHTML = `<i>No bar data for ${t.date}.</i>`;
+    clearVerticalLines();
+    return;
+  }
+  // Clear chart first to avoid leftover state from a previous trade
+  try { candleSeries.setData([]); } catch (e) {}
+  try { candleSeries.setMarkers([]); } catch (e) {}
+  const candleData = allBars.map(b => ({
+    time: b.t, open: b.o, high: b.h, low: b.l, close: b.c,
+  }));
+  console.log('setData:', candleData.length, 'bars; first:', candleData[0], 'last:', candleData[candleData.length-1]);
+  try {
+    candleSeries.setData(candleData);
+  } catch (e) {
+    console.error('setData error:', e.message);
+    document.getElementById('summary').innerHTML = `setData error: ${e.message}`;
+    return;
+  }
+  // Focus the visible range on the trade day (09:00 ET -> exit time + 30 min buffer).
+  // Using fitContent() would also stretch the previous day (00:00-23:59 ET of globex)
+  // into view, which compresses the price action we actually care about.
+  // The overnight context is still in the data; user can pan left to see it.
+  const visibleFrom = Math.floor(d.day_bars[0].t / 60) * 60 - 30 * 60;  // 30 min before 09:30
+  const visibleTo = Math.ceil(t.exit_time / 60) * 60 + 30 * 60;        // 30 min after exit
+  try {
+    chart.timeScale().setVisibleRange({ from: visibleFrom, to: visibleTo });
+  } catch (e) { console.warn('setVisibleRange error', e); }
+
+  // IB levels: only valid on the trade day
+  const tradeDayStart = Math.floor(d.day_bars[0].t / 60) * 60;
+  const tradeDayEnd = Math.floor(d.day_bars[d.day_bars.length-1].t / 60) * 60;
+  const ibEndTime = tradeDayStart + 60 * 60; // 10:30 = 09:30 + 60 min
+
+  // Add price lines, tracking them for later removal
+  const addPL = (opts) => {
+    const line = candleSeries.createPriceLine(opts);
+    activePriceLines.push(line);
+    return line;
+  };
+  addPL({ price: t.ib_high, color: '#f85149', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'IBH' });
+  addPL({ price: t.ib_low,  color: '#3fb950', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'IBL' });
+  addPL({ price: t.ib_mid,  color: '#d29922', lineWidth: 1, lineStyle: 1, axisLabelVisible: true, title: 'IBMid' });
+  addPL({ price: t.stop_price, color: '#f85149', lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: 'Stop' });
+  addPL({ price: t.target_price, color: '#3fb950', lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: 'Target' });
+
+  // Markers
+  const markers = [
+    {
+      time: t.entry_time,
+      position: t.direction === 'long' ? 'belowBar' : 'aboveBar',
+      color: '#58a6ff',
+      shape: 'arrowUp',
+      text: `Entry ${t.direction === 'long' ? 'L' : 'S'} @ ${t.entry_price.toFixed(2)}`,
+    },
+    {
+      time: t.exit_time,
+      position: t.direction === 'long' ? 'aboveBar' : 'belowBar',
+      color: t.hit_target ? '#3fb950' : (t.hit_stop ? '#f85149' : '#a371f7'),
+      shape: 'arrowDown',
+      text: `Exit ${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(0)} ${t.hit_target ? '🎯' : (t.hit_stop ? '🛑' : '⏱')}`,
+    },
+  ];
+  // Mark IB High formation (when IBH was first reached during 09:30-10:30)
+  if (t.ib_high_time) {
+    markers.push({
+      time: t.ib_high_time,
+      position: 'aboveBar',
+      color: '#f85149',
+      shape: 'circle',
+      text: `IBH @ ${fmtET(t.ib_high_time)}`,
+    });
+  }
+  // Mark IB Low formation (when IBL was first reached during 09:30-10:30)
+  if (t.ib_low_time) {
+    markers.push({
+      time: t.ib_low_time,
+      position: 'belowBar',
+      color: '#3fb950',
+      shape: 'circle',
+      text: `IBL @ ${fmtET(t.ib_low_time)}`,
+    });
+  }
+  // Mark IB close (10:30) - the moment bias was determined
+  markers.push({
+    time: ibEndTime,
+    position: 'inBar',
+    color: '#7d8590',
+    shape: 'circle',
+    text: 'IB end 10:30 ET',
+  });
+  markers.sort((a, b) => a.time - b.time);
+  candleSeries.setMarkers(markers);
+
+  // Draw vertical lines at 09:30 and 10:30 ET on top of the chart via an HTML overlay.
+  // The chart has no native vertical line primitive in v4.1, so we convert
+  // timestamps to x-pixel coordinates using the chart's timeScale.
+  drawVerticalLines(t.ib_high_time, ibEndTime, tradeDayStart);
+
+  // Summary bar
+  const pnlScaled = t.pnl * sizeMultiplier();
+  const pnlClass = pnlScaled >= 0 ? 'pnl-win' : 'pnl-loss';
+  const maePct = (t.mae / Math.abs(t.entry_price - t.stop_price) * 100).toFixed(0);
+  const mfePct = (t.mfe / Math.abs(t.target_price - t.entry_price) * 100).toFixed(0);
+  const sizeStr = `${contracts} × $${multPerPt}/pt = $${(contracts*multPerPt).toFixed(0)}/pt total`;
+  document.getElementById('summary').innerHTML = `
+    <div class="item"><div class="label">Date</div><div class="value">${t.date}</div></div>
+    <div class="item"><div class="label">Direction</div><div class="value">${t.direction.toUpperCase()} (bias: ${t.bias})</div></div>
+    <div class="item"><div class="label">IB</div><div class="value">${t.ib_low.toFixed(2)} – ${t.ib_high.toFixed(2)} (range ${t.ib_range.toFixed(1)})</div></div>
+    <div class="item"><div class="label">Entry</div><div class="value">${t.entry_price.toFixed(2)} @ ${fmtET(t.entry_time)} ET</div></div>
+    <div class="item"><div class="label">Stop / Target</div><div class="value">${t.stop_price.toFixed(2)} / ${t.target_price.toFixed(2)}</div></div>
+    <div class="item"><div class="label">Exit</div><div class="value">${t.exit_price.toFixed(2)} @ ${fmtET(t.exit_time)} ET</div></div>
+    <div class="item"><div class="label">P&L <span style="font-size:10px;color:#7d8590">(${sizeStr})</span></div><div class="value" style="color:${pnlScaled>=0?'#3fb950':'#f85149'};font-weight:bold">${pnlScaled>=0?'+':''}$${pnlScaled.toFixed(2)}</div></div>
+    <div class="item"><div class="label">Outcome</div><div class="value">${t.hit_target?'🎯 Target':(t.hit_stop?'🛑 Stop':'⏱ Session End')}</div></div>
+    <div class="item"><div class="label">MAE / MFE</div><div class="value">${t.mae.toFixed(1)} / ${t.mfe.toFixed(1)} pts (${maePct}% / ${mfePct}% of R)</div></div>
+  `;
+
+  document.getElementById('prev').disabled = (activeIdx === 0);
+  document.getElementById('next').disabled = (activeIdx === filtered.length - 1);
+}
+
+document.getElementById('prev').addEventListener('click', () => selectTrade(activeIdx - 1));
+document.getElementById('next').addEventListener('click', () => selectTrade(activeIdx + 1));
+// Fit button: toggle between full-fit (prev day + trade day) and the focused trade-day view.
+let isFullFit = false;
+document.getElementById('fit').addEventListener('click', () => {
+  if (!chart) return;
+  if (isFullFit) {
+    // Re-apply the focused range from the current trade
+    selectTrade(activeIdx);
+  } else {
+    chart.timeScale().fitContent();
+  }
+  isFullFit = !isFullFit;
+  document.getElementById('fit').textContent = isFullFit ? '⤢ Fitted' : '⤢ Fit';
+});
+['f-win','f-loss','f-be','f-long','f-short','f-date'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { applyFilters(); renderList(); if (filtered.length > 0) selectTrade(0); });
+});
+document.querySelectorAll('.size-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    contracts = parseFloat(btn.dataset.contracts);
+    multPerPt = parseFloat(btn.dataset.mult);
+    document.getElementById('f-contracts').value = contracts;
+    document.getElementById('f-mult').value = multPerPt;
+    if (activeSizeBtn) activeSizeBtn.classList.remove('active');
+    btn.classList.add('active');
+    activeSizeBtn = btn;
+    renderList();
+    if (activeIdx >= 0) selectTrade(activeIdx);
+  });
+});
+document.getElementById('f-contracts').addEventListener('input', e => {
+  contracts = parseFloat(e.target.value) || 1;
+  if (activeSizeBtn) activeSizeBtn.classList.remove('active');
+  activeSizeBtn = null;
+  renderList();
+  if (activeIdx >= 0) selectTrade(activeIdx);
+});
+document.getElementById('f-mult').addEventListener('input', e => {
+  multPerPt = parseFloat(e.target.value) || 20;
+  if (activeSizeBtn) activeSizeBtn.classList.remove('active');
+  activeSizeBtn = null;
+  renderList();
+  if (activeIdx >= 0) selectTrade(activeIdx);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') selectTrade(activeIdx - 1);
+  if (e.key === 'ArrowRight') selectTrade(activeIdx + 1);
+});
+
+load();
+</script>
+<div style="position:fixed;bottom:16px;left:16px;font-size:11px;color:#7d8590;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px 10px;z-index:20">
+  Data: <a href="?data=ib50_simple" style="color:#58a6ff;text-decoration:none">ib50 simple</a> | <a href="?data=baseline" style="color:#58a6ff;text-decoration:none">baseline (no filters)</a> | <a href="?data=strict" style="color:#58a6ff;text-decoration:none">strict (test+overnight)</a>
+</div>
+</body>
+</html>
